@@ -1,5 +1,5 @@
 # GraphRAG Insurance Demo
-The following directory contains a demo on insurance policies. It shows how a GraphRAG chatbot can be build on top of long and complex documents. These documents are real `documents` downloaded from several Dutch Insurance companies. These documents can be found in the documents directory.  
+The following directory contains a demo on insurance policies. It shows how a GraphRAG chatbot can be build on top of long and complex documents. 
 
 ## GraphRAG
 As GraphRAG gains popularity this demo shows the functionality that Graphs can offer with a RAG-system. 
