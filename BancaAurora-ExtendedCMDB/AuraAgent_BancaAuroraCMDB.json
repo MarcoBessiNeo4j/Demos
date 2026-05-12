@@ -1,0 +1,135 @@
+{
+  "name": "BancaAurora Risk&CMDB Analyst",
+  "description": "Banca Aurora chatbot analyzer. Use the Knowledge Graph Layer to provide contextual and accurate answers. The data is recovered using the tools defined, using predefined parametric Cypher queries, similarity search on text embeddings using the neo4j vector index, and Text2Cypher",
+  "system_prompt": "You are a read-only graph analyst for Banca Aurora.\nYour job is to explain business impact, technical exposure, remediation evidence, ownership and infrastructure reachability using the Neo4j graph.\n\nAlways prefer Cypher Template tools over Text2Cypher.\nUse Similarity Search only for fuzzy or semantic security questions.\nUse Text2Cypher only when no template tool can answer the question.\n\nNever return embeddings, raw node objects, raw relationships, or element IDs.\nPrefer concise business-first answers:\n1. impacted business process\n2. impacted application or repository\n3. security signal (SAST, library CVE, runtime CVE)\n4. infrastructure/server context\n5. owner and recommended next investigation step\n\nWhen a question is ambiguous, ask a short clarifying question.\nWhen multiple assets are returned, rank them by business importance and risk.",
+  "is_private": true,
+  "is_mcp_enabled": false,
+  "tools": [
+    {
+      "name": "Natural Language to Cypher Tool",
+      "description": "A general-purpose, free-form Text-to-Cypher tool that converts natural language questions into Cypher queries, executes them, and returns the results. Use this option when no specialized tool (e.g. for aggregation or domain-specific logic) is more appropriate.",
+      "enabled": true,
+      "type": "text2cypher"
+    },
+    {
+      "name": "business_process_risk_profile",
+      "description": "Use for questions about one named BusinessProcess.\nReturns the operating model, owning person, supporting applications, repositories, security findings, runtime context and a synthetic risk score.\nUse when the user asks about the risk, dependencies, or technical footprint of a business process.\nParameter process_name must exactly match BusinessProcess.name.",
+      "enabled": true,
+      "type": "cypherTemplate",
+      "config": {
+        "template": "MATCH (bp:BusinessProcess {name: $process_name})\nOPTIONAL MATCH (bp)<-[:OWNS]-(bpOwner:Owner)\nOPTIONAL MATCH (bp)-[:CALLS]->(act:Activity)-[:USES]->(app:Application)\nOPTIONAL MATCH (app)<-[:OWNS]-(appOwner:Owner)\nOPTIONAL MATCH (app)-[:HAS_REPO]->(repo:Repository)\nOPTIONAL MATCH (repo)-[:CONTAINS]->(si:SastIssue)\nOPTIONAL MATCH (repo)-[:CONTAINS]->(:File)-[:IMPORTS]->(:Library)<-[:AFFECTS]-(libCve:CVE)\nOPTIONAL MATCH (app)-[:RUNNING_ON]->(sw:Software)<-[:AFFECTS]-(runtimeCve1:CVE)\nOPTIONAL MATCH (app)-[:RUNNING_ON*1..3]->(srv:Server)<-[:RUNNING_ON]-(runtimeSw:Software)<-[:AFFECTS]-(runtimeCve2:CVE)\nWITH bp, bpOwner,\n     collect(DISTINCT act.name) AS activities,\n     collect(DISTINCT app.name) AS applications,\n     collect(DISTINCT appOwner.name) AS applicationOwners,\n     collect(DISTINCT repo.name) AS repositories,\n     count(DISTINCT si) AS sastCount,\n     count(DISTINCT libCve) AS libraryCveCount,\n     count(DISTINCT runtimeCve1) + count(DISTINCT runtimeCve2) AS runtimeCveCount,\n     collect(DISTINCT srv.name) AS servers\nRETURN bp.name AS businessProcess,\n       bp.revenue AS revenue,\n       bpOwner.name AS owner,\n       activities,\n       applications,\n       applicationOwners,\n       repositories,\n       servers,\n       sastCount,\n       libraryCveCount,\n       runtimeCveCount,\n       (sastCount + (2 * libraryCveCount) + (2 * runtimeCveCount)) AS riskScore\nLIMIT 10",
+        "parameters": [
+          {
+            "name": "process_name",
+            "data_type": "string",
+            "description": "Name of the BusinessProcess."
+          }
+        ]
+      }
+    },
+    {
+      "name": "application_security_profile",
+      "description": "Use for questions about one named Application.\nReturns business context, owner, repositories, SAST findings, vulnerable libraries, runtime software, runtime CVEs and hosting servers.\nUse when the user asks what is risky about an application or how an application is exposed.\nParameter application_name must exactly match Application.name.",
+      "enabled": true,
+      "type": "cypherTemplate",
+      "config": {
+        "template": "MATCH (app:Application {name: $application_name})\nOPTIONAL MATCH (app)<-[:OWNS]-(appOwner:Owner)\nOPTIONAL MATCH (app)<-[:USES]-(act:Activity)<-[:CALLS]-(bp:BusinessProcess)\nOPTIONAL MATCH (app)-[:HAS_REPO]->(repo:Repository)\nOPTIONAL MATCH (repo)-[:CONTAINS]->(si:SastIssue)\nOPTIONAL MATCH (repo)-[:CONTAINS]->(:File)-[:IMPORTS]->(lib:Library)<-[:AFFECTS]-(libCve:CVE)\nOPTIONAL MATCH (app)-[:RUNNING_ON]->(sw:Software)<-[:AFFECTS]-(runtimeCve1:CVE)\nOPTIONAL MATCH (app)-[:RUNNING_ON*1..3]->(srv:Server)\nOPTIONAL MATCH (srv)<-[:RUNNING_ON]-(runtimeSw:Software)<-[:AFFECTS]-(runtimeCve2:CVE)\nWITH app, appOwner,\n     collect(DISTINCT bp.name) AS businessProcesses,\n     collect(DISTINCT act.name) AS activities,\n     collect(DISTINCT repo.name) AS repositories,\n     collect(DISTINCT si.name) AS sastIssues,\n     collect(DISTINCT lib.name + ' ' + lib.version + ' [' + libCve.cve_code + ']') AS vulnerableLibraries,\n     collect(DISTINCT runtimeSw.name + ' ' + runtimeSw.version + ' [' + runtimeCve2.cve_code + ']') +\n     collect(DISTINCT sw.name + ' ' + sw.version + ' [' + runtimeCve1.cve_code + ']') AS runtimeFindings,\n     collect(DISTINCT srv.name) AS servers\nRETURN app.name AS application,\n       appOwner.name AS owner,\n       [x IN businessProcesses WHERE x IS NOT NULL] AS businessProcesses,\n       [x IN activities WHERE x IS NOT NULL] AS activities,\n       [x IN repositories WHERE x IS NOT NULL] AS repositories,\n       [x IN sastIssues WHERE x IS NOT NULL] AS sastIssues,\n       [x IN vulnerableLibraries WHERE x IS NOT NULL] AS vulnerableLibraries,\n       [x IN runtimeFindings WHERE x IS NOT NULL] AS runtimeFindings,\n       [x IN servers WHERE x IS NOT NULL] AS servers\nLIMIT 10",
+        "parameters": [
+          {
+            "name": "application_name",
+            "data_type": "string",
+            "description": "Name of an Application"
+          }
+        ]
+      }
+    },
+    {
+      "name": "repository_remediation_evidence",
+      "description": "Use for questions about one named Repository and its remediation history.\nReturns the application, owner, SAST findings, remediation commits and changed files.\nUse when the user asks what was fixed, which findings were remediated, or how code changes relate to security issues.\nParameter repository_name must exactly match Repository.name.",
+      "enabled": true,
+      "type": "cypherTemplate",
+      "config": {
+        "template": "MATCH (repo:Repository {name: $repository_name})\nOPTIONAL MATCH (repo)<-[:HAS_REPO]-(app:Application)<-[:OWNS]-(owner:Owner)\nOPTIONAL MATCH (repo)-[:CONTAINS]->(si:SastIssue)\nOPTIONAL MATCH (repo)-[:CONTAINS]->(fix:Commit)-[:REFERENCES]->(si)\nOPTIONAL MATCH (fix)-[:CHANGED]->(:FileVersion)<-[:HAS_VERSION]-(file:File)\nWITH repo, app, owner, si, fix, collect(DISTINCT file.name) AS changedFiles\nRETURN repo.name AS repository,\n       app.name AS application,\n       owner.name AS owner,\n       si.name AS sastIssue,\n       si.date AS issueDate,\n       fix.name AS remediationCommit,\n       fix.date AS fixDate,\n       fix.description AS remediationDescription,\n       changedFiles\nORDER BY fixDate DESC, sastIssue\nLIMIT 25",
+        "parameters": [
+          {
+            "name": "repository_name",
+            "data_type": "string",
+            "description": "Name of a Repository"
+          }
+        ]
+      }
+    },
+    {
+      "name": "cve_business_impact",
+      "description": "Use for questions about a named CVE code.\nReturns impacted libraries or software, applications, business processes, owners and servers.\nUse when the user asks where a CVE shows up in the bank landscape or what business capability it can affect.\nParameter cve_code must exactly match CVE.cve_code.",
+      "enabled": true,
+      "type": "cypherTemplate",
+      "config": {
+        "template": "MATCH (c:CVE {cve_code: $cve_code})\nOPTIONAL MATCH (c)-[:AFFECTS]->(lib:Library)<-[:IMPORTS]-(:File)<-[:CONTAINS]-(:Repository)<-[:HAS_REPO]-(appFromLib:Application)\nOPTIONAL MATCH (c)-[:AFFECTS]->(sw:Software)<-[:RUNNING_ON]-(appDirect:Application)\nOPTIONAL MATCH (c)-[:AFFECTS]->(sw2:Software)-[:RUNNING_ON]->(:Server)<-[:RUNNING_ON]-(appOnServer:Application)\nWITH c, collect(DISTINCT lib.name + ' ' + lib.version) AS libraries,\n     collect(DISTINCT sw.name + ' ' + sw.version) + collect(DISTINCT sw2.name + ' ' + sw2.version) AS software,\n     collect(DISTINCT appFromLib) + collect(DISTINCT appDirect) + collect(DISTINCT appOnServer) AS rawApps\nUNWIND rawApps AS app\nOPTIONAL MATCH (app)<-[:USES]-(act:Activity)<-[:CALLS]-(bp:BusinessProcess)\nOPTIONAL MATCH (app)<-[:OWNS]-(owner:Owner)\nOPTIONAL MATCH (app)-[:RUNNING_ON*1..3]->(srv:Server)\nWITH c, libraries, software,\n     collect(DISTINCT app.name) AS applications,\n     collect(DISTINCT bp.name) AS businessProcesses,\n     collect(DISTINCT owner.name) AS owners,\n     collect(DISTINCT srv.name) AS servers\nRETURN c.cve_code AS cveCode,\n       c.title AS title,\n       c.severity AS severity,\n       c.score AS score,\n       [x IN libraries WHERE x IS NOT NULL] AS libraries,\n       [x IN software WHERE x IS NOT NULL] AS software,\n       [x IN applications WHERE x IS NOT NULL] AS applications,\n       [x IN businessProcesses WHERE x IS NOT NULL] AS businessProcesses,\n       [x IN owners WHERE x IS NOT NULL] AS owners,\n       [x IN servers WHERE x IS NOT NULL] AS servers\nLIMIT 10",
+        "parameters": [
+          {
+            "name": "cve_code",
+            "data_type": "string",
+            "description": "Code of a CVE"
+          }
+        ]
+      }
+    },
+    {
+      "name": "owner_blast_radius",
+      "description": "Use for questions about one Owner and everything in their scope.\nReturns owned business processes, applications, servers and the associated security signals.\nUse when the user asks who is responsible, what an owner controls or how large the blast radius is for a named owner.\nParameter owner_name must exactly match Owner.name.",
+      "enabled": true,
+      "type": "cypherTemplate",
+      "config": {
+        "template": "MATCH (o:Owner {name: $owner_name})\nOPTIONAL MATCH (o)-[:OWNS]->(bp:BusinessProcess)\nOPTIONAL MATCH (o)-[:OWNS]->(app:Application)\nOPTIONAL MATCH (o)-[:OWNS]->(srv:Server)\nOPTIONAL MATCH (app)-[:HAS_REPO]->(:Repository)-[:CONTAINS]->(si:SastIssue)\nOPTIONAL MATCH (app)-[:HAS_REPO]->(:Repository)-[:CONTAINS]->(:File)-[:IMPORTS]->(:Library)<-[:AFFECTS]-(libCve:CVE)\nOPTIONAL MATCH (app)-[:RUNNING_ON]->(sw:Software)<-[:AFFECTS]-(runtimeCve1:CVE)\nOPTIONAL MATCH (srv)<-[:RUNNING_ON]-(runtimeSw:Software)<-[:AFFECTS]-(runtimeCve2:CVE)\nRETURN o.name AS owner,\n       o.role AS role,\n       collect(DISTINCT bp.name) AS businessProcesses,\n       collect(DISTINCT app.name) AS applications,\n       collect(DISTINCT srv.name) AS servers,\n       count(DISTINCT si) AS sastIssues,\n       count(DISTINCT libCve) AS libraryCVEs,\n       count(DISTINCT runtimeCve1) + count(DISTINCT runtimeCve2) AS runtimeCVEs\nLIMIT 10",
+        "parameters": [
+          {
+            "name": "owner_name",
+            "data_type": "string",
+            "description": "Name and Surname of a Person (Owner)"
+          }
+        ]
+      }
+    },
+    {
+      "name": "entrypoint_downstream_impact",
+      "description": "Use for questions about a named entry-point server such as bastion or web tier.\nReturns downstream servers, applications, business processes and CVEs reachable within the bank network.\nUse when the user asks what can be impacted from a server, which business capabilities depend on a server, or how a DMZ node connects to critical assets.\nParameter server_name must exactly match Server.name.",
+      "enabled": true,
+      "type": "cypherTemplate",
+      "config": {
+        "template": "MATCH (entry:Server {name: $server_name})\nOPTIONAL MATCH (entry)-[:CONNECTED_WITH*1..3]->(srv:Server)\nOPTIONAL MATCH (srv)<-[:RUNNING_ON]-(app:Application)\nOPTIONAL MATCH (srv)<-[:RUNNING_ON]-(sw:Software)<-[:AFFECTS]-(c:CVE)\nOPTIONAL MATCH (app)<-[:USES]-(act:Activity)<-[:CALLS]-(bp:BusinessProcess)\nRETURN entry.name AS entryServer,\n       collect(DISTINCT srv.name) AS downstreamServers,\n       collect(DISTINCT app.name) AS applications,\n       collect(DISTINCT bp.name) AS businessProcesses,\n       collect(DISTINCT c.cve_code) AS runtimeCVEs\nLIMIT 10",
+        "parameters": [
+          {
+            "name": "server_name",
+            "data_type": "string",
+            "description": "Server name"
+          }
+        ]
+      }
+    },
+    {
+      "name": "similar_security_findings",
+      "description": "Use for fuzzy security questions about code findings, leak patterns, authorization defects, deserialization, path traversal or logging issues.\nSearches semantically similar SAST issues.",
+      "enabled": true,
+      "type": "similaritySearch",
+      "config": {
+        "provider": "openai",
+        "model": "text-embedding-3-small",
+        "index": "sast_issue_embedding_idx",
+        "top_k": 4
+      }
+    },
+    {
+      "name": "similar_cve_knowledge",
+      "description": "Use for fuzzy vulnerability questions when the user does not know the exact CVE code but describes the flaw, such as log forging, path traversal, remote code execution or authorization bypass.\nSearches semantically similar CVEs.",
+      "enabled": true,
+      "type": "similaritySearch",
+      "config": {
+        "provider": "openai",
+        "model": "text-embedding-3-small",
+        "index": "cve_embedding_idx",
+        "top_k": 4
+      }
+    }
+  ]
+}
