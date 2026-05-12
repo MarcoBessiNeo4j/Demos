@@ -1,0 +1,620 @@
+{
+  "version": 2,
+  "title": "Banca Aurora",
+  "description": "CMDB Dashboard",
+  "pages": [
+    {
+      "id": "0",
+      "version": 1,
+      "title": "Overall",
+      "widgets": [
+        {
+          "version": 1,
+          "title": "Applications with at least one security signal",
+          "w": 6,
+          "h": 2,
+          "x": 6,
+          "y": 0,
+          "meta": {
+            "latestCypherQueries": [
+              {
+                "query": "MATCH (app:Application)\nOPTIONAL MATCH (app)-[:HAS_REPO]->(:Repository)-[:CONTAINS]->(si:SastIssue)\nOPTIONAL MATCH (app)-[:HAS_REPO]->(:Repository)-[:CONTAINS]->(:File)-[:IMPORTS]->(:Library)<-[:AFFECTS]-(lcve:CVE)\nOPTIONAL MATCH (app)-[:RUNNING_ON]->(sw:Software)<-[:AFFECTS]-(rcve:CVE)\nOPTIONAL MATCH (app)-[:RUNNING_ON]->(srv:Server)<-[:RUNNING_ON]-(sw2:Software)<-[:AFFECTS]-(rcve2:CVE)\nWITH app,\n     count(DISTINCT si) AS sastCount,\n     count(DISTINCT lcve) AS libCveCount,\n     count(DISTINCT rcve) + count(DISTINCT rcve2) AS runtimeCveCount\nWHERE sastCount > 0 OR libCveCount > 0 OR runtimeCveCount > 0\nRETURN count(app) AS value;",
+                "origin": "user"
+              }
+            ]
+          },
+          "settings": {
+            "type": "singleValue",
+            "query": "MATCH (app:Application)\nOPTIONAL MATCH (app)-[:HAS_REPO]->(:Repository)-[:CONTAINS]->(si:SastIssue)\nOPTIONAL MATCH (app)-[:HAS_REPO]->(:Repository)-[:CONTAINS]->(:File)-[:IMPORTS]->(:Library)<-[:AFFECTS]-(lcve:CVE)\nOPTIONAL MATCH (app)-[:RUNNING_ON]->(sw:Software)<-[:AFFECTS]-(rcve:CVE)\nOPTIONAL MATCH (app)-[:RUNNING_ON]->(srv:Server)<-[:RUNNING_ON]-(sw2:Software)<-[:AFFECTS]-(rcve2:CVE)\nWITH app,\n     count(DISTINCT si) AS sastCount,\n     count(DISTINCT lcve) AS libCveCount,\n     count(DISTINCT rcve) + count(DISTINCT rcve2) AS runtimeCveCount\nWHERE sastCount > 0 OR libCveCount > 0 OR runtimeCveCount > 0\nRETURN count(app) AS value;",
+            "databaseName": "neo4j",
+            "version": 1,
+            "fontSize": null,
+            "textColor": null,
+            "align": 4
+          }
+        },
+        {
+          "version": 1,
+          "title": "Exposure composition",
+          "w": 4,
+          "h": 4,
+          "x": 4,
+          "y": 2,
+          "meta": {
+            "latestCypherQueries": [
+              {
+                "query": "MATCH (app:Application)\nOPTIONAL MATCH (app)-[:HAS_REPO]->(:Repository)-[:CONTAINS]->(si:SastIssue)\nOPTIONAL MATCH (app)-[:HAS_REPO]->(:Repository)-[:CONTAINS]->(:File)-[:IMPORTS]->(:Library)<-[:AFFECTS]-(lcve:CVE)\nOPTIONAL MATCH (app)-[:RUNNING_ON]->(sw:Software)<-[:AFFECTS]-(rcve:CVE)\nOPTIONAL MATCH (app)-[:RUNNING_ON]->(srv:Server)<-[:RUNNING_ON]-(sw2:Software)<-[:AFFECTS]-(rcve2:CVE)\nWITH count(DISTINCT si) AS sastCount,\n     count(DISTINCT lcve) AS libCveCount,\n     count(DISTINCT rcve) + count(DISTINCT rcve2) AS runtimeCveCount\nUNWIND [\n  {category: 'SAST Issues', value: sastCount},\n  {category: 'Library CVEs', value: libCveCount},\n  {category: 'Runtime CVEs', value: runtimeCveCount}\n] AS row\nRETURN row.category AS category, row.value AS value;",
+                "origin": "user"
+              }
+            ]
+          },
+          "settings": {
+            "type": "pie",
+            "query": "MATCH (app:Application)\nOPTIONAL MATCH (app)-[:HAS_REPO]->(:Repository)-[:CONTAINS]->(si:SastIssue)\nOPTIONAL MATCH (app)-[:HAS_REPO]->(:Repository)-[:CONTAINS]->(:File)-[:IMPORTS]->(:Library)<-[:AFFECTS]-(lcve:CVE)\nOPTIONAL MATCH (app)-[:RUNNING_ON]->(sw:Software)<-[:AFFECTS]-(rcve:CVE)\nOPTIONAL MATCH (app)-[:RUNNING_ON]->(srv:Server)<-[:RUNNING_ON]-(sw2:Software)<-[:AFFECTS]-(rcve2:CVE)\nWITH count(DISTINCT si) AS sastCount,\n     count(DISTINCT lcve) AS libCveCount,\n     count(DISTINCT rcve) + count(DISTINCT rcve2) AS runtimeCveCount\nUNWIND [\n  {category: 'SAST Issues', value: sastCount},\n  {category: 'Library CVEs', value: libCveCount},\n  {category: 'Runtime CVEs', value: runtimeCveCount}\n] AS row\nRETURN row.category AS category, row.value AS value;",
+            "databaseName": "neo4j",
+            "version": 1,
+            "showLegend": "auto",
+            "enableDownloadImage": true
+          }
+        },
+        {
+          "version": 1,
+          "title": "Top business processes by synthetic risk score",
+          "w": 4,
+          "h": 4,
+          "x": 0,
+          "y": 2,
+          "meta": {
+            "latestCypherQueries": [
+              {
+                "query": "MATCH (bp:BusinessProcess)-[:CALLS]->(:Activity)-[:USES]->(app:Application)\nOPTIONAL MATCH (app)-[:HAS_REPO]->(:Repository)-[:CONTAINS]->(si:SastIssue)\nOPTIONAL MATCH (app)-[:HAS_REPO]->(:Repository)-[:CONTAINS]->(:File)-[:IMPORTS]->(:Library)<-[:AFFECTS]-(lcve:CVE)\nOPTIONAL MATCH (app)-[:RUNNING_ON]->(sw:Software)<-[:AFFECTS]-(rcve:CVE)\nOPTIONAL MATCH (app)-[:RUNNING_ON]->(srv:Server)<-[:RUNNING_ON]-(sw2:Software)<-[:AFFECTS]-(rcve2:CVE)\nWITH bp,\n     count(DISTINCT si) AS sastCount,\n     count(DISTINCT lcve) AS libCveCount,\n     count(DISTINCT rcve) + count(DISTINCT rcve2) AS runtimeCveCount\nRETURN bp.name AS category,\n       sastCount + (2 * libCveCount) + (2 * runtimeCveCount) AS value\nORDER BY value DESC, category\nLIMIT 10;",
+                "origin": "user"
+              }
+            ]
+          },
+          "settings": {
+            "type": "bar",
+            "query": "MATCH (bp:BusinessProcess)-[:CALLS]->(:Activity)-[:USES]->(app:Application)\nOPTIONAL MATCH (app)-[:HAS_REPO]->(:Repository)-[:CONTAINS]->(si:SastIssue)\nOPTIONAL MATCH (app)-[:HAS_REPO]->(:Repository)-[:CONTAINS]->(:File)-[:IMPORTS]->(:Library)<-[:AFFECTS]-(lcve:CVE)\nOPTIONAL MATCH (app)-[:RUNNING_ON]->(sw:Software)<-[:AFFECTS]-(rcve:CVE)\nOPTIONAL MATCH (app)-[:RUNNING_ON]->(srv:Server)<-[:RUNNING_ON]-(sw2:Software)<-[:AFFECTS]-(rcve2:CVE)\nWITH bp,\n     count(DISTINCT si) AS sastCount,\n     count(DISTINCT lcve) AS libCveCount,\n     count(DISTINCT rcve) + count(DISTINCT rcve2) AS runtimeCveCount\nRETURN bp.name AS category,\n       sastCount + (2 * libCveCount) + (2 * runtimeCveCount) AS syntheticRiskScore\nORDER BY syntheticRiskScore DESC, category\nLIMIT 10;",
+            "databaseName": "neo4j",
+            "valueKeys": [],
+            "orientation": "vertical",
+            "scaleType": "linear",
+            "showLegend": "auto",
+            "showDataZoom": "auto",
+            "version": 1,
+            "barArrangement": "grouped",
+            "enableDownloadImage": true
+          }
+        },
+        {
+          "version": 1,
+          "title": "Infrastructure and runtime overview",
+          "w": 4,
+          "h": 4,
+          "x": 8,
+          "y": 2,
+          "meta": {
+            "latestCypherQueries": [
+              {
+                "query": "MATCH p1 = (sw:Software)-[:RUNNING_ON*1..2]->(srv:Server)\nOPTIONAL MATCH p2 = (app:Application)-[:RUNNING_ON]->(sw)\nOPTIONAL MATCH p3 = (app2:Application)-[:RUNNING_ON]->(srv)\nRETURN p1, p2, p3\nLIMIT 250;",
+                "origin": "user"
+              }
+            ]
+          },
+          "settings": {
+            "type": "graph",
+            "query": "MATCH p1 = (sw:Software)-[:RUNNING_ON*1..2]->(srv:Server)\nOPTIONAL MATCH p2 = (app:Application)-[:RUNNING_ON]->(sw)\nOPTIONAL MATCH p3 = (app2:Application)-[:RUNNING_ON]->(srv)\nRETURN p1, p2, p3\nLIMIT 250;",
+            "databaseName": "neo4j",
+            "version": 2,
+            "enableSidePanel": true,
+            "enableContextMenu": true,
+            "layout": {
+              "type": "hierarchical",
+              "options": {
+                "direction": "down"
+              }
+            },
+            "enableDownloadImage": true
+          }
+        },
+        {
+          "version": 1,
+          "title": "Business Processes",
+          "w": 3,
+          "h": 2,
+          "x": 0,
+          "y": 0,
+          "meta": {},
+          "settings": {
+            "type": "singleValue",
+            "query": "MATCH (bp:BusinessProcess)\nRETURN count(bp) AS value;",
+            "databaseName": "neo4j",
+            "version": 1,
+            "fontSize": null,
+            "textColor": null,
+            "align": 4
+          }
+        },
+        {
+          "version": 1,
+          "title": "Critical CVEs",
+          "w": 3,
+          "h": 2,
+          "x": 3,
+          "y": 0,
+          "meta": {
+            "latestCypherQueries": [
+              {
+                "query": "MATCH (c:CVE)\nWHERE c.severity = 'CRITICAL'\nRETURN count(c) AS value;",
+                "origin": "user"
+              }
+            ]
+          },
+          "settings": {
+            "type": "singleValue",
+            "query": "MATCH (c:CVE)\nWHERE c.severity = 'CRITICAL'\nRETURN count(c) AS value;",
+            "databaseName": "neo4j",
+            "version": 1,
+            "fontSize": null,
+            "textColor": null,
+            "align": 4
+          }
+        }
+      ]
+    },
+    {
+      "id": "1",
+      "version": 1,
+      "title": "Engineering",
+      "widgets": [
+        {
+          "version": 1,
+          "title": "Selected repository SDLC graph",
+          "w": 8,
+          "h": 4,
+          "x": 4,
+          "y": 4,
+          "meta": {},
+          "settings": {
+            "type": "graph",
+            "query": "MATCH p1 = (repo:Repository {name: $repository_name})-[:CONTAINS]->(:File)-[:HAS_VERSION]->(:FileVersion)\nOPTIONAL MATCH p2 = (repo)-[:CONTAINS]->(:Commit)-[:CHANGED]->(:FileVersion)\nOPTIONAL MATCH p3 = (repo)-[:CONTAINS]->(:SastIssue)<-[:REFERENCES]-(:Commit)\nOPTIONAL MATCH p4 = (repo)-[:CONTAINS]->(:File)-[:IMPORTS]->(:Library)<-[:AFFECTS]-(:CVE)\nRETURN p1, p2, p3, p4\nLIMIT 300;",
+            "databaseName": "neo4j",
+            "version": 2,
+            "enableSidePanel": true,
+            "enableContextMenu": true,
+            "layout": {
+              "type": "hierarchical",
+              "options": {
+                "direction": "down"
+              }
+            },
+            "enableDownloadImage": true
+          }
+        },
+        {
+          "version": 1,
+          "title": "Remediation evidence for selected repository",
+          "w": 12,
+          "h": 3,
+          "x": 0,
+          "y": 1,
+          "meta": {},
+          "settings": {
+            "type": "table",
+            "query": "MATCH (repo:Repository {name: $repository_name})\nOPTIONAL MATCH (repo)-[:CONTAINS]->(si:SastIssue)\nOPTIONAL MATCH (repo)-[:CONTAINS]->(fix:Commit)-[:REFERENCES]->(si)\nRETURN repo.name AS repository,\n       si.name AS sastIssue,\n       si.date AS issueDate,\n       fix.name AS remediationCommit,\n       fix.date AS fixDate,\n       fix.description AS remediationDescription\nORDER BY fixDate DESC, sastIssue;",
+            "databaseName": "neo4j",
+            "actions": [],
+            "version": 1,
+            "richRenderCells": false,
+            "enableRecordsDownload": true
+          }
+        },
+        {
+          "version": 1,
+          "title": "Repository selection",
+          "w": 3,
+          "h": 1,
+          "x": 0,
+          "y": 0,
+          "meta": {},
+          "settings": {
+            "version": 1,
+            "type": "filter",
+            "databaseName": "neo4j",
+            "entityType": "node",
+            "entityLabel": "Repository",
+            "entityPropertyKey": "name",
+            "parameterName": "repository_name",
+            "enableTimeZone": false,
+            "numberType": "Integer"
+          }
+        },
+        {
+          "version": 1,
+          "title": "Commits over time for selected repository",
+          "w": 4,
+          "h": 4,
+          "x": 0,
+          "y": 4,
+          "meta": {
+            "latestCypherQueries": [
+              {
+                "query": "MATCH (:Repository {name: $repository_name})-[:CONTAINS]->(c:Commit)\nWITH date(c.date) AS commitDate, count(c) AS commits\nRETURN commitDate AS x, commits AS nCommits\nORDER BY nCommits;",
+                "origin": "user"
+              }
+            ]
+          },
+          "settings": {
+            "type": "bar",
+            "query": "MATCH (:Repository {name: $repository_name})-[:CONTAINS]->(c:Commit)\nWITH date(c.date) AS commitDate, count(c) AS commits\nRETURN commitDate AS x, commits AS nCommits\nORDER BY nCommits;",
+            "databaseName": "neo4j",
+            "valueKeys": [],
+            "orientation": "vertical",
+            "scaleType": "linear",
+            "showLegend": "auto",
+            "showDataZoom": "auto",
+            "version": 1,
+            "barArrangement": "grouped",
+            "enableDownloadImage": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "2",
+      "version": 1,
+      "title": "Security",
+      "widgets": [
+        {
+          "version": 1,
+          "title": "Selected application security profile",
+          "w": 8,
+          "h": 3,
+          "x": 4,
+          "y": 1,
+          "meta": {
+            "latestCypherQueries": [
+              {
+                "query": "MATCH (app:Application {name: $application_name})\nOPTIONAL MATCH (app)-[:HAS_REPO]->(:Repository)-[:CONTAINS]->(si:SastIssue)\nOPTIONAL MATCH (app)-[:HAS_REPO]->(:Repository)-[:CONTAINS]->(:File)-[:IMPORTS]->(lib:Library)<-[:AFFECTS]-(lcve:CVE)\nOPTIONAL MATCH (app)-[:RUNNING_ON]->(sw:Software)<-[:AFFECTS]-(rcve:CVE)\nOPTIONAL MATCH (app)-[:RUNNING_ON]->(srv:Server)<-[:RUNNING_ON]-(sw2:Software)<-[:AFFECTS]-(rcve2:CVE)\nWITH app,\n     collect(DISTINCT si.name) AS sastIssues,\n     collect(DISTINCT lib.name + ' ' + lib.version + ' [' + lcve.cve_code + ']') AS libraryFindings,\n     collect(DISTINCT sw.name + ' ' + sw.version + ' [' + rcve.cve_code + ']') +\n     collect(DISTINCT sw2.name + ' ' + sw2.version + ' [' + rcve2.cve_code + ']') AS runtimeFindings\nRETURN app.name AS application,\n       [x IN sastIssues WHERE x IS NOT NULL] AS sastIssues,\n       [x IN libraryFindings WHERE x IS NOT NULL] AS vulnerableLibraries,\n       [x IN runtimeFindings WHERE x IS NOT NULL] AS vulnerableRuntime;",
+                "origin": "user"
+              }
+            ]
+          },
+          "settings": {
+            "type": "table",
+            "query": "MATCH (app:Application {name: $application_name})\nOPTIONAL MATCH (app)-[:HAS_REPO]->(:Repository)-[:CONTAINS]->(si:SastIssue)\nOPTIONAL MATCH (app)-[:HAS_REPO]->(:Repository)-[:CONTAINS]->(:File)-[:IMPORTS]->(lib:Library)<-[:AFFECTS]-(lcve:CVE)\nOPTIONAL MATCH (app)-[:RUNNING_ON]->(sw:Software)<-[:AFFECTS]-(rcve:CVE)\nOPTIONAL MATCH (app)-[:RUNNING_ON]->(srv:Server)<-[:RUNNING_ON]-(sw2:Software)<-[:AFFECTS]-(rcve2:CVE)\nWITH app,\n     collect(DISTINCT si.name) AS sastIssues,\n     collect(DISTINCT lib.name + ' ' + lib.version + ' [' + lcve.cve_code + ']') AS libraryFindings,\n     collect(DISTINCT sw.name + ' ' + sw.version + ' [' + rcve.cve_code + ']') +\n     collect(DISTINCT sw2.name + ' ' + sw2.version + ' [' + rcve2.cve_code + ']') AS runtimeFindings\nRETURN app.name AS application,\n       [x IN sastIssues WHERE x IS NOT NULL] AS sastIssues,\n       [x IN libraryFindings WHERE x IS NOT NULL] AS vulnerableLibraries,\n       [x IN runtimeFindings WHERE x IS NOT NULL] AS vulnerableRuntime;",
+            "databaseName": "neo4j",
+            "actions": [],
+            "version": 1,
+            "richRenderCells": false,
+            "enableRecordsDownload": true
+          }
+        },
+        {
+          "version": 1,
+          "title": "Application exposure points by CVE",
+          "w": 4,
+          "h": 4,
+          "x": 0,
+          "y": 0,
+          "meta": {
+            "latestCypherQueries": [
+              {
+                "query": "MATCH (c:CVE)\nOPTIONAL MATCH (c)-[:AFFECTS]->(:Library)<-[:IMPORTS]-(:File)<-[:CONTAINS]-(:Repository)<-[:HAS_REPO]-(a1:Application)\nOPTIONAL MATCH (c)-[:AFFECTS]->(:Software)<-[:RUNNING_ON]-(a2:Application)\nOPTIONAL MATCH (c)-[:AFFECTS]->(:Software)-[:RUNNING_ON]->(:Server)<-[:RUNNING_ON]-(a3:Application)\nWITH c, collect(DISTINCT a1) + collect(DISTINCT a2) + collect(DISTINCT a3) AS rawApps\nUNWIND rawApps AS app\nWITH c, app\nWHERE app IS NOT NULL\nWITH c, collect(DISTINCT app) AS apps\nRETURN c.cve_code AS category, size(apps) AS value\nORDER BY value DESC, category;",
+                "origin": "user"
+              }
+            ]
+          },
+          "settings": {
+            "type": "bar",
+            "query": "MATCH (c:CVE)\nOPTIONAL MATCH (c)-[:AFFECTS]->(:Library)<-[:IMPORTS]-(:File)<-[:CONTAINS]-(:Repository)<-[:HAS_REPO]-(a1:Application)\nOPTIONAL MATCH (c)-[:AFFECTS]->(:Software)<-[:RUNNING_ON]-(a2:Application)\nOPTIONAL MATCH (c)-[:AFFECTS]->(:Software)-[:RUNNING_ON]->(:Server)<-[:RUNNING_ON]-(a3:Application)\nWITH c, collect(DISTINCT a1) + collect(DISTINCT a2) + collect(DISTINCT a3) AS rawApps\nUNWIND rawApps AS app\nWITH c, app\nWHERE app IS NOT NULL\nWITH c, collect(DISTINCT app) AS apps\nRETURN c.cve_code AS category, size(apps) AS nApps\nORDER BY nApps DESC, category;",
+            "databaseName": "neo4j",
+            "valueKeys": [],
+            "orientation": "vertical",
+            "scaleType": "linear",
+            "showLegend": "auto",
+            "showDataZoom": "auto",
+            "version": 1,
+            "barArrangement": "grouped",
+            "enableDownloadImage": true
+          }
+        },
+        {
+          "version": 1,
+          "title": "Servers with critical runtime CVE",
+          "w": 3,
+          "h": 2,
+          "x": 0,
+          "y": 4,
+          "meta": {
+            "latestCypherQueries": [
+              {
+                "query": "MATCH (srv:Server)<-[:RUNNING_ON]-(sw:Software)<-[:AFFECTS]-(c:CVE)\nWHERE c.severity = 'CRITICAL'\nRETURN count(DISTINCT srv) AS value;",
+                "origin": "user"
+              }
+            ]
+          },
+          "settings": {
+            "type": "singleValue",
+            "query": "MATCH (srv:Server)<-[:RUNNING_ON]-(sw:Software)<-[:AFFECTS]-(c:CVE)\nWHERE c.severity = 'CRITICAL'\nRETURN count(DISTINCT srv) AS value;",
+            "databaseName": "neo4j",
+            "version": 1,
+            "fontSize": null,
+            "textColor": null,
+            "align": 4
+          }
+        },
+        {
+          "version": 1,
+          "title": "Severity selection",
+          "w": 3,
+          "h": 1,
+          "x": 0,
+          "y": 6,
+          "meta": {},
+          "settings": {
+            "version": 1,
+            "type": "filter",
+            "databaseName": "neo4j",
+            "entityType": "node",
+            "entityLabel": "CVE",
+            "entityPropertyKey": "severity",
+            "parameterName": "cve_severity",
+            "enableTimeZone": false,
+            "numberType": "Integer"
+          }
+        },
+        {
+          "version": 1,
+          "title": "Application selection",
+          "w": 3,
+          "h": 1,
+          "x": 4,
+          "y": 0,
+          "meta": {},
+          "settings": {
+            "version": 1,
+            "type": "filter",
+            "databaseName": "neo4j",
+            "entityType": "node",
+            "entityLabel": "Application",
+            "entityPropertyKey": "name",
+            "parameterName": "application_name",
+            "enableTimeZone": false,
+            "numberType": "Integer"
+          }
+        },
+        {
+          "version": 1,
+          "title": "Servers filtered by severity",
+          "w": 9,
+          "h": 3,
+          "x": 3,
+          "y": 4,
+          "meta": {
+            "latestCypherQueries": [
+              {
+                "query": "MATCH (srv:Server)<-[:RUNNING_ON]-(sw:Software)<-[:AFFECTS]-(c:CVE)\nWHERE c.severity = $cve_severity\nOPTIONAL MATCH (app:Application)-[:RUNNING_ON]->(srv)\nRETURN srv.name AS server,\n       srv.ip AS ip,\n       collect(DISTINCT sw.name + ' ' + sw.version) AS software,\n       collect(DISTINCT c.cve_code) AS cves,\n       collect(DISTINCT app.name) AS applications,\n       c.severity AS severity,\n       c.score AS score\nORDER BY size(cves) DESC, server, score DESC;",
+                "origin": "user"
+              },
+              {
+                "query": "MATCH (srv:Server)<-[:RUNNING_ON]-(sw:Software)<-[:AFFECTS]-(c:CVE)\nWHERE c.severity = $severity\nOPTIONAL MATCH (app:Application)-[:RUNNING_ON]->(srv)\nRETURN srv.name AS server,\n       srv.ip AS ip,\n       collect(DISTINCT sw.name + ' ' + sw.version) AS software,\n       collect(DISTINCT c.cve_code) AS cves,\n       collect(DISTINCT app.name) AS applications,\n       c.severity AS severity,\n       c.score AS score\nORDER BY size(cves) DESC, server, score DESC;",
+                "origin": "user"
+              },
+              {
+                "query": "MATCH (srv:Server)<-[:RUNNING_ON]-(sw:Software)<-[:AFFECTS]-(c:CVE\nWHERE c.severity = $severity\nOPTIONAL MATCH (app:Application)-[:RUNNING_ON]->(srv)\nRETURN srv.name AS server,\n       srv.ip AS ip,\n       collect(DISTINCT sw.name + ' ' + sw.version) AS software,\n       collect(DISTINCT c.cve_code) AS cves,\n       collect(DISTINCT app.name) AS applications,\n       c.severity AS severity,\n       c.score AS score\nORDER BY size(cves) DESC, server, score DESC;",
+                "origin": "user"
+              },
+              {
+                "query": "MATCH (srv:Server)<-[:RUNNING_ON]-(sw:Software)<-[:AFFECTS]-(c:CVE)\nOPTIONAL MATCH (app:Application)-[:RUNNING_ON]->(srv)\nRETURN srv.name AS server,\n       srv.ip AS ip,\n       collect(DISTINCT sw.name + ' ' + sw.version) AS software,\n       collect(DISTINCT c.cve_code) AS cves,\n       collect(DISTINCT app.name) AS applications,\n       c.severity AS severity,\n       c.score AS score\nORDER BY size(cves) DESC, server, score DESC;",
+                "origin": "user"
+              },
+              {
+                "query": "MATCH (srv:Server)<-[:RUNNING_ON]-(sw:Software)<-[:AFFECTS]-(c:CVE)\nOPTIONAL MATCH (app:Application)-[:RUNNING_ON]->(srv)\nRETURN srv.name AS server,\n       srv.ip AS ip,\n       collect(DISTINCT sw.name + ' ' + sw.version) AS software,\n       collect(DISTINCT c.cve_code) AS cves,\n       collect(DISTINCT app.name) AS applications,\n       c.severity AS severity\nORDER BY size(cves) DESC, server, severity DESC;",
+                "origin": "user"
+              }
+            ]
+          },
+          "settings": {
+            "type": "table",
+            "query": "MATCH (srv:Server)<-[:RUNNING_ON]-(sw:Software)<-[:AFFECTS]-(c:CVE)\nWHERE c.severity = $cve_severity \nOPTIONAL MATCH (app:Application)-[:RUNNING_ON]->(srv)\nRETURN srv.name AS server,\n       srv.ip AS ip,\n       collect(DISTINCT sw.name + ' ' + sw.version) AS software,\n       collect(DISTINCT c.cve_code) AS cves,\n       collect(DISTINCT app.name) AS applications,\n       c.severity AS severity,\n       c.score AS score\nORDER BY size(cves) DESC, server, score DESC;",
+            "databaseName": "neo4j",
+            "actions": [],
+            "version": 1,
+            "richRenderCells": false,
+            "enableRecordsDownload": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "3",
+      "version": 1,
+      "title": "Business",
+      "widgets": [
+        {
+          "version": 1,
+          "title": "Selected process operating model",
+          "w": 4,
+          "h": 4,
+          "x": 4,
+          "y": 0,
+          "meta": {
+            "latestCypherQueries": [
+              {
+                "query": "MATCH p1 = (bp:BusinessProcess {name: $businessprocess_name})-[:CALLS*1..2]->(:Activity)-[:USES]->(app:Application)\nOPTIONAL MATCH p2 = (:Owner)-[:OWNS]->(bp)\nOPTIONAL MATCH p3 = (:Owner)-[:OWNS]->(app)\nRETURN p1, p2, p3\nLIMIT 200;",
+                "origin": "user"
+              },
+              {
+                "query": "MATCH p1 = (bp:BusinessProcess {name: $business_process})-[:CALLS*1..2]->(:Activity)-[:USES]->(app:Application)\nOPTIONAL MATCH p2 = (:Owner)-[:OWNS]->(bp)\nOPTIONAL MATCH p3 = (:Owner)-[:OWNS]->(app)\nRETURN p1, p2, p3\nLIMIT 200;",
+                "origin": "user"
+              }
+            ]
+          },
+          "settings": {
+            "type": "graph",
+            "query": "MATCH p1 = (bp:BusinessProcess {name: $businessprocess_name})-[:CALLS*1..2]->(:Activity)-[:USES]->(app:Application)\nOPTIONAL MATCH p2 = (:Owner)-[:OWNS]->(bp)\nOPTIONAL MATCH p3 = (:Owner)-[:OWNS]->(app)\nRETURN p1, p2, p3\nLIMIT 200;\n",
+            "databaseName": "neo4j",
+            "version": 2,
+            "enableSidePanel": true,
+            "enableContextMenu": true,
+            "layout": {
+              "type": "hierarchical",
+              "options": {
+                "direction": "down"
+              }
+            },
+            "enableDownloadImage": true
+          }
+        },
+        {
+          "version": 1,
+          "title": "High-value processes with technical risk",
+          "w": 12,
+          "h": 3,
+          "x": 0,
+          "y": 4,
+          "meta": {
+            "latestCypherQueries": [
+              {
+                "query": "MATCH (bp:BusinessProcess)-[:CALLS]->(:Activity)-[:USES]->(app:Application)\nOPTIONAL MATCH (app)-[:HAS_REPO]->(:Repository)-[:CONTAINS]->(si:SastIssue)\nOPTIONAL MATCH (app)-[:HAS_REPO]->(:Repository)-[:CONTAINS]->(:File)-[:IMPORTS]->(:Library)<-[:AFFECTS]-(lcve:CVE)\nOPTIONAL MATCH (app)-[:RUNNING_ON]->(sw:Software)<-[:AFFECTS]-(rcve:CVE)\nOPTIONAL MATCH (app)-[:RUNNING_ON]->(srv:Server)<-[:RUNNING_ON]-(sw2:Software)<-[:AFFECTS]-(rcve2:CVE)\nWITH bp,\n     count(DISTINCT si) AS sastCount,\n     count(DISTINCT lcve) AS libCveCount,\n     count(DISTINCT rcve) + count(DISTINCT rcve2) AS runtimeCveCount\nRETURN bp.name AS businessProcess,\n       bp.revenue AS revenue,\n       sastCount AS sastIssues,\n       libCveCount AS libraryCVEs,\n       runtimeCveCount AS runtimeCVEs,\n       (sastCount + (2 * libCveCount) + (2 * runtimeCveCount)) AS riskScore\nORDER BY revenue DESC, riskScore DESC;",
+                "origin": "user"
+              }
+            ]
+          },
+          "settings": {
+            "type": "table",
+            "query": "MATCH (bp:BusinessProcess)-[:CALLS]->(:Activity)-[:USES]->(app:Application)\nOPTIONAL MATCH (app)-[:HAS_REPO]->(:Repository)-[:CONTAINS]->(si:SastIssue)\nOPTIONAL MATCH (app)-[:HAS_REPO]->(:Repository)-[:CONTAINS]->(:File)-[:IMPORTS]->(:Library)<-[:AFFECTS]-(lcve:CVE)\nOPTIONAL MATCH (app)-[:RUNNING_ON]->(sw:Software)<-[:AFFECTS]-(rcve:CVE)\nOPTIONAL MATCH (app)-[:RUNNING_ON]->(srv:Server)<-[:RUNNING_ON]-(sw2:Software)<-[:AFFECTS]-(rcve2:CVE)\nWITH bp,\n     count(DISTINCT si) AS sastCount,\n     count(DISTINCT lcve) AS libCveCount,\n     count(DISTINCT rcve) + count(DISTINCT rcve2) AS runtimeCveCount\nRETURN bp.name AS businessProcess,\n       bp.revenue AS revenue,\n       sastCount AS sastIssues,\n       libCveCount AS libraryCVEs,\n       runtimeCveCount AS runtimeCVEs,\n       (sastCount + (2 * libCveCount) + (2 * runtimeCveCount)) AS riskScore\nORDER BY revenue DESC, riskScore DESC;",
+            "databaseName": "neo4j",
+            "actions": [],
+            "version": 1,
+            "richRenderCells": false,
+            "enableRecordsDownload": true
+          }
+        },
+        {
+          "version": 1,
+          "title": "BusinessProcess selection",
+          "w": 4,
+          "h": 1,
+          "x": 0,
+          "y": 0,
+          "meta": {},
+          "settings": {
+            "version": 1,
+            "type": "filter",
+            "databaseName": "neo4j",
+            "entityType": "node",
+            "entityLabel": "BusinessProcess",
+            "entityPropertyKey": "name",
+            "parameterName": "businessprocess_name",
+            "enableTimeZone": false,
+            "numberType": "Integer"
+          }
+        },
+        {
+          "version": 1,
+          "title": "Applications supporting selected process",
+          "w": 4,
+          "h": 4,
+          "x": 8,
+          "y": 0,
+          "meta": {
+            "latestCypherQueries": [
+              {
+                "query": "MATCH (bp:BusinessProcess {name: $businessprocess_name})-[:CALLS]->(act:Activity)-[:USES]->(app:Application)\nOPTIONAL MATCH (owner:Owner)-[:OWNS]->(app)\nRETURN bp.name AS businessProcess,\n       act.name AS activity,\n       app.name AS application,\n       owner.name AS owner\nORDER BY activity, application;",
+                "origin": "user"
+              }
+            ]
+          },
+          "settings": {
+            "type": "table",
+            "query": "MATCH (bp:BusinessProcess {name: $businessprocess_name})-[:CALLS]->(act:Activity)-[:USES]->(app:Application)\nOPTIONAL MATCH (owner:Owner)-[:OWNS]->(app)\nRETURN bp.name AS businessProcess,\n       act.name AS activity,\n       app.name AS application,\n       owner.name AS owner\nORDER BY activity, application;",
+            "databaseName": "neo4j",
+            "actions": [],
+            "version": 1,
+            "richRenderCells": false,
+            "enableRecordsDownload": true
+          }
+        },
+        {
+          "version": 1,
+          "title": "Revenues by BusinessProcess",
+          "w": 4,
+          "h": 3,
+          "x": 0,
+          "y": 1,
+          "meta": {},
+          "settings": {
+            "type": "bar",
+            "query": "MATCH (bp:BusinessProcess)\nRETURN bp.name AS category, bp.revenue AS value\nORDER BY value DESC, category;",
+            "databaseName": "neo4j",
+            "valueKeys": [],
+            "orientation": "vertical",
+            "scaleType": "linear",
+            "showLegend": "auto",
+            "showDataZoom": "auto",
+            "version": 1,
+            "barArrangement": "grouped",
+            "enableDownloadImage": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "4",
+      "version": 1,
+      "title": "CrossDomain Investigation",
+      "widgets": [
+        {
+          "version": 1,
+          "title": "Converging exposure: business process + code issue + CVE + reachable server",
+          "w": 12,
+          "h": 5,
+          "x": 0,
+          "y": 0,
+          "meta": {
+            "latestCypherQueries": [
+              {
+                "query": "MATCH (bp:BusinessProcess)-[:CALLS]->(:Activity)-[:USES]->(app:Application)\nOPTIONAL MATCH (app)-[:HAS_REPO]->(:Repository)-[:CONTAINS]->(si:SastIssue)\nOPTIONAL MATCH (app)-[:HAS_REPO]->(:Repository)-[:CONTAINS]->(:File)-[:IMPORTS]->(:Library)<-[:AFFECTS]-(libCve:CVE)\nOPTIONAL MATCH (app)-[:RUNNING_ON]->(sw:Software)<-[:AFFECTS]-(runCve1:CVE)\nOPTIONAL MATCH (app)-[:RUNNING_ON*1..3]->(srv:Server)<-[:RUNNING_ON]-(sw2:Software)<-[:AFFECTS]-(runCve2:CVE)\nOPTIONAL MATCH (app)-[:RUNNING_ON*1..3]->(srv2:Server)\nOPTIONAL MATCH (entry:Server)-[:CONNECTED_WITH*1..3]->(srv2)\nWHERE entry.name STARTS WITH 'bank-prd-web' OR entry.name = 'bank-prd-bastion-01'\nWITH bp, app,\n     count(DISTINCT si) AS sastCount,\n     count(DISTINCT libCve) AS libCveCount,\n     count(DISTINCT runCve1) + count(DISTINCT runCve2) AS runtimeCveCount,\n     collect(DISTINCT srv2.name) AS servers,\n     collect(DISTINCT entry.name) AS entryPoints\nWHERE sastCount > 0\n  AND (libCveCount > 0 OR runtimeCveCount > 0)\n  AND size([x IN entryPoints WHERE x IS NOT NULL]) > 0\nRETURN bp.name AS businessProcess,\n       bp.revenue AS revenue,\n       app.name AS application,\n       sastCount AS sastIssues,\n       libCveCount AS libraryCVEs,\n       runtimeCveCount AS runtimeCVEs,\n       [x IN servers WHERE x IS NOT NULL] AS servers,\n       [x IN entryPoints WHERE x IS NOT NULL] AS entryPoints,\n       (sastCount + (2 * libCveCount) + (2 * runtimeCveCount)) AS riskScore\nORDER BY riskScore DESC, revenue DESC, businessProcess, application;",
+                "origin": "user"
+              }
+            ]
+          },
+          "settings": {
+            "type": "table",
+            "query": "MATCH (bp:BusinessProcess)-[:CALLS]->(:Activity)-[:USES]->(app:Application)\nOPTIONAL MATCH (app)-[:HAS_REPO]->(:Repository)-[:CONTAINS]->(si:SastIssue)\nOPTIONAL MATCH (app)-[:HAS_REPO]->(:Repository)-[:CONTAINS]->(:File)-[:IMPORTS]->(:Library)<-[:AFFECTS]-(libCve:CVE)\nOPTIONAL MATCH (app)-[:RUNNING_ON]->(sw:Software)<-[:AFFECTS]-(runCve1:CVE)\nOPTIONAL MATCH (app)-[:RUNNING_ON*1..3]->(srv:Server)<-[:RUNNING_ON]-(sw2:Software)<-[:AFFECTS]-(runCve2:CVE)\nOPTIONAL MATCH (app)-[:RUNNING_ON*1..3]->(srv2:Server)\nOPTIONAL MATCH (entry:Server)-[:CONNECTED_WITH*1..3]->(srv2)\nWHERE entry.name STARTS WITH 'bank-prd-web' OR entry.name = 'bank-prd-bastion-01'\nWITH bp, app,\n     count(DISTINCT si) AS sastCount,\n     count(DISTINCT libCve) AS libCveCount,\n     count(DISTINCT runCve1) + count(DISTINCT runCve2) AS runtimeCveCount,\n     collect(DISTINCT srv2.name) AS servers,\n     collect(DISTINCT entry.name) AS entryPoints\nWHERE sastCount > 0\n  AND (libCveCount > 0 OR runtimeCveCount > 0)\n  AND size([x IN entryPoints WHERE x IS NOT NULL]) > 0\nRETURN bp.name AS businessProcess,\n       bp.revenue AS revenue,\n       app.name AS application,\n       sastCount AS sastIssues,\n       libCveCount AS libraryCVEs,\n       runtimeCveCount AS runtimeCVEs,\n       [x IN servers WHERE x IS NOT NULL] AS servers,\n       [x IN entryPoints WHERE x IS NOT NULL] AS entryPoints,\n       (sastCount + (2 * libCveCount) + (2 * runtimeCveCount)) AS riskScore\nORDER BY riskScore DESC, revenue DESC, businessProcess, application;",
+            "databaseName": "neo4j",
+            "actions": [],
+            "version": 1,
+            "richRenderCells": false,
+            "enableRecordsDownload": true
+          }
+        }
+      ]
+    }
+  ],
+  "params": [
+    {
+      "version": 1,
+      "key": "cve_severity",
+      "initialValue": "CRITICAL"
+    },
+    {
+      "version": 1,
+      "key": "businessprocess_name",
+      "initialValue": "Corporate Credit Underwriting"
+    },
+    {
+      "version": 1,
+      "key": "repository_name",
+      "initialValue": "sepa-payments-orchestrator"
+    },
+    {
+      "version": 1,
+      "key": "application_name",
+      "type": "string",
+      "initialValue": "SepaPaymentsHub"
+    }
+  ]
+}
