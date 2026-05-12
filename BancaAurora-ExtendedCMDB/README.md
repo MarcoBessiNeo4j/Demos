@@ -1,7 +1,8 @@
 ################################################################################
-Banca Aurora - CMDB                                                        
-Marco Bessi, marco.bessi@neo4j.com                                         
+Banca Aurora - CMDB
+Marco Bessi, marco.bessi@neo4j.com
 ################################################################################
+
 
 
 ################################################################################
@@ -18,6 +19,7 @@ Folder dashboards:
 
 Claude:
 6. Configure a new personalized connector in Claude, using the Aura MCP endpoint (something like http://mcp.neo4j.io/agent?project_id=...) 
+
 
 
 ################################################################################
@@ -53,6 +55,8 @@ Possibility to create parameters and select values with drop-down.
 
 Message to pass:
 > The same story can be told in executive, engineering, and security terms without changing the data model.
+
+
 
 ################################################################################
 AURA AGENTS
