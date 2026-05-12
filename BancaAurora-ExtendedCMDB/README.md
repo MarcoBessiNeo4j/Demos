@@ -1,12 +1,11 @@
 ################################################################################
-## Banca Aurora - CMDB                                                        
-################################################################################
-## Marco Bessi, marco.bessi@neo4j.com                                         
+Banca Aurora - CMDB                                                        
+Marco Bessi, marco.bessi@neo4j.com                                         
 ################################################################################
 
-########################################
-## Data loading
-########################################
+
+################################################################################
+DATA LOADING
 
 Folder dataset:
 1. Create a new DB on Aura
@@ -20,16 +19,20 @@ Folder dashboards:
 Claude:
 6. Configure a new personalized connector in Claude, using the Aura MCP endpoint (something like http://mcp.neo4j.io/agent?project_id=...) 
 
-########################################
-## Aura dashboards
-########################################
+
+################################################################################
+AURA DASHBOARDS
 
 Show the menu and the different feature of the Console.
 
-#### Query
+########################################
+QUERY
+
 Query is the old Browser. It is the technical dashboard to query the DB. You need to know Cypher to interact with the DB.
 
-#### Explore
+########################################
+EXPLORE
+
 Explore is the old Bloom. It is the graph dashboard created to be used by non-technical people. 
 Show:
 - Pattern autocomplete: `(Application {name:'CorporateCreditWorkbench'})-[HAS_REPO]->(Repository)-[CONTAINS]->(File)`
@@ -42,18 +45,21 @@ Show:
 Message to pass:
 > I’m not just looking at a single CVE or just one repo; I’m looking at which part of the banking business is impacted.
 
-#### Dashboard
+########################################
+DASHBOARD
+
 Dashboard is the old NeoDash. It is a BI dashboard (only fo Neo4j). A technician build the dashboard (easily, each block contains a Cypher to get the info to be reported in the block). The non-tech people can get the info they need.
 Possibility to create parameters and select values with drop-down.
 
 Message to pass:
 > The same story can be told in executive, engineering, and security terms without changing the data model.
 
-########################################
-## Aura agents
-########################################
+################################################################################
+AURA AGENTS
 
-#### Agents on Aura
+########################################
+AGENTS ON AURA
+
 Show slides and explain
 Agent configuration: 
 - Agent: name, description, prompt, access (internal)
@@ -64,7 +70,9 @@ Questions for Agent Internal on Aura:
 - `Who are the owners of these business processes?` --> show that a tool is selected and used
 - `Are there findings related to log forging? What are the applications affected?` --> show that the similarity search is used and then another cypher template to get all the info to reply to the question
 
-#### Agents with Claude
+########################################
+AGENTS WITH CLAUDE
+
 Change the access flag in the Agent configuration to External
 Copy the MCP endpoint
 Show how to configure a connector to the Aura MCP: show the endpoint
